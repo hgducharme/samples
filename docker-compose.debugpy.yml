@@ -1,0 +1,10 @@
+services:
+  web:
+    # This command will override the original command for this service, and will spool up debugpy
+    # so the vscode debugger can connect to it
+    # To debug django templates, you must have the --wait-for-client flag
+    command: python -m debugpy --log-to /var/log/debugpy --listen 0.0.0.0:3000 --wait-for-client manage.py runserver 0.0.0.0:8000
+    ports:
+      - 3000:3000
+    volumes:
+      - ./logs/debugpy:/var/log/debugpy

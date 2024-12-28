@@ -1,0 +1,59 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker compose reference guide at
+# https://docs.docker.com/compose/compose-file/
+
+# For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+
+name: highlighttools-ui
+
+services:
+  web:
+    image: dev:0.1
+    build:
+      context: ./app/
+      dockerfile: Dockerfile.dev
+      ## 'secrets' is used for sending secret vars from the environment to the image build process
+      secrets:
+        - GITHUB_USER
+        - GITHUB_TOKEN
+      ## 'args' is used to set environment variables at build time 
+      # args:
+      #   PYTHON_VERSION: ${PYTHON_VERSION}
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - 8000:8000
+    ## 'env_file' is for setting container runtime environment variables
+    env_file:
+      - ./.envs/.dev/.env.dev.django
+    ## 'environment' is for explicitly setting container runtime variables
+    # environment:
+    #   - var1=var1
+    volumes:
+      - ./app/:/usr/src/app
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.envs/.dev/.env.dev.db
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+secrets:
+  GITHUB_USER:
+    file: ./.envs/.github_user
+  GITHUB_TOKEN:
+    file: ./.envs/.github_token

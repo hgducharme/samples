@@ -1,0 +1,56 @@
+name: highlighttools-ui
+
+services:
+
+  # Django service
+  web:
+    image: prod:0.1
+    build:
+      context: ./app/
+      dockerfile: Dockerfile.prod
+      secrets:
+        - GITHUB_USER
+        - GITHUB_TOKEN
+    command: gunicorn htui.wsgi:application --bind 0.0.0.0:8000
+    expose:
+      - 8000
+    env_file:
+      - ./.envs/.prod/.env.prod.django
+    volumes:
+      - static_volume:/usr/src/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Postgres service
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.envs/.prod/.env.prod.db
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx service
+  nginx:
+    build: ./nginx
+    ports:
+      - 1337:80
+    volumes:
+      - static_volume:/usr/src/app/staticfiles
+    depends_on:
+      - web
+
+volumes:
+  postgres_data: # Persist the database data between container restarts
+  static_volume:
+
+secrets:
+  GITHUB_USER:
+    file: ./.envs/.github_user
+  GITHUB_TOKEN:
+    file: ./.envs/.github_token
